@@ -36,6 +36,12 @@ router.post('/', importsController.createImportJob);
  *               file:
  *                 type: string
  *                 format: binary
+ *               targetSchema:
+ *                 type: string
+ *                 description: JSON string describing the target schema (required)
+ *               userInstruction:
+ *                 type: string
+ *                 description: Optional user instruction for the mapping assistant
  *     responses:
  *       200:
  *         description: Upload metadata
@@ -50,6 +56,18 @@ router.post('/', importsController.createImportJob);
  *                   type: string
  *                 size:
  *                   type: integer
+ *                 headers:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 sampleRows:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     additionalProperties:
+ *                       type: string
+ *                 mappingSuggestion:
+ *                   type: object
  *       400:
  *         description: Missing file
  */
