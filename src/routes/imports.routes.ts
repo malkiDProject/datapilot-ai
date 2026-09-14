@@ -22,6 +22,31 @@ router.post('/', importsController.createImportJob);
 
 /**
  * @openapi
+ * /api/v1/imports/{id}:
+ *   get:
+ *     summary: Retrieve an ImportJob by id
+ *     tags: [Imports]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ImportJob id
+ *     responses:
+ *       200:
+ *         description: The ImportJob object
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ImportJob'
+ *       404:
+ *         description: ImportJob not found
+ */
+router.get('/:id', importsController.getImportJob);
+
+/**
+ * @openapi
  * /api/v1/imports/{id}/upload:
  *   post:
  *     summary: Upload a CSV file for import for a given ImportJob

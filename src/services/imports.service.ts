@@ -28,7 +28,16 @@ export function getImportJobById(id: string): ImportJob | null {
   return importJobRepository.findById(id);
 }
 
+export function updateImportJobStatus(id: string, status: ImportJobStatus): ImportJob | null {
+  const job = importJobRepository.findById(id);
+  if (!job) return null;
+  job.status = status;
+  job.updatedAt = new Date();
+  return importJobRepository.update(job);
+}
+
 export default {
   createImportJobService,
   getImportJobById,
+  updateImportJobStatus,
 };
