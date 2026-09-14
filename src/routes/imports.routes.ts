@@ -22,10 +22,17 @@ router.post('/', importsController.createImportJob);
 
 /**
  * @openapi
- * /api/v1/imports/upload:
+ * /api/v1/imports/{id}/upload:
  *   post:
- *     summary: Upload a CSV file for import (not parsed yet)
+ *     summary: Upload a CSV file for import for a given ImportJob
  *     tags: [Imports]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ImportJob id
  *     requestBody:
  *       required: true
  *       content:
@@ -50,6 +57,8 @@ router.post('/', importsController.createImportJob);
  *             schema:
  *               type: object
  *               properties:
+ *                 importJobId:
+ *                   type: string
  *                 originalName:
  *                   type: string
  *                 mimeType:
@@ -69,8 +78,10 @@ router.post('/', importsController.createImportJob);
  *                 mappingSuggestion:
  *                   type: object
  *       400:
- *         description: Missing file
+ *         description: Missing file or invalid input
+ *       404:
+ *         description: ImportJob not found
  */
-router.post('/upload', uploadMiddleware.single('file'), importsController.uploadFile);
+router.post('/:id/upload', uploadMiddleware.single('file'), importsController.uploadFile);
 
 export default router;

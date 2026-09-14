@@ -15,6 +15,18 @@ export function createImportJob(req: Request, res: Response) {
 
 export async function uploadFile(req: Request, res: Response) {
   try {
+    const importJobId = req.params && req.params.id;
+
+    if (!importJobId || typeof importJobId !== 'string') {
+      return res.status(400).json({ error: 'Missing import job id in path parameter.' });
+    }
+
+    // verify import job exists via service
+    const importJob = importsService.getImportJobById(importJobId);
+    if (!importJob) {
+      return res.status(404).json({ error: `ImportJob with id '${importJobId}' not found.` });
+    }
+
     const file = req.file as Express.Multer.File | undefined;
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded. Provide a file in the "file" field.' });
@@ -61,6 +73,7 @@ export async function uploadFile(req: Request, res: Response) {
       }
 
       const result = {
+        importJobId,
         originalName: file.originalname,
         mimeType: file.mimetype,
         size: file.size,
