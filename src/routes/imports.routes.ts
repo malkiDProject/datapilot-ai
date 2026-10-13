@@ -8,8 +8,20 @@ const router = express.Router();
  * @openapi
  * /api/v1/imports:
  *   post:
- *     summary: Create a new import job
+ *     summary: Create a new import job linked to a pipeline
  *     tags: [Imports]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - pipelineId
+ *             properties:
+ *               pipelineId:
+ *                 type: string
+ *                 description: The pipeline that owns the import job
  *     responses:
  *       201:
  *         description: Import job created successfully
@@ -17,6 +29,10 @@ const router = express.Router();
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ImportJob'
+ *       400:
+ *         description: Invalid pipeline request payload
+ *       404:
+ *         description: Pipeline not found
  */
 router.post('/', importsController.createImportJob);
 
@@ -68,9 +84,6 @@ router.get('/:id', importsController.getImportJob);
  *               file:
  *                 type: string
  *                 format: binary
- *               targetSchema:
- *                 type: string
- *                 description: JSON string describing the target schema (required)
  *               userInstruction:
  *                 type: string
  *                 description: Optional user instruction for the mapping assistant

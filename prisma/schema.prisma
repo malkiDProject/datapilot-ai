@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum DataSourceType {
+  CSV
+  SFTP
+  S3
+  REST_API
+}
+
+enum ApprovalMode {
+  MANUAL
+  AUTO
+}
+
+enum ImportJobStatus {
+  CREATED
+  FILE_UPLOADED
+  VALIDATED
+  MAPPING_SUGGESTED
+  ANALYZED
+  MAPPING_PENDING_APPROVAL
+  READY_TO_TRANSFORM
+  TRANSFORMED
+  EXPORTED
+  FAILED
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dataSources  DataSource[]
+  targetSchemas TargetSchema[]
+  pipelines     Pipeline[]
+}
+
+model DataSource {
+  id        String          @id @default(uuid())
+  tenantId  String
+  name      String
+  type      DataSourceType
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipelines Pipeline[]
+
+  @@index([tenantId])
+}
+
+model TargetSchema {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  fields    Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pipelines Pipeline[]
+
+  @@index([tenantId])
+}
+
+model Pipeline {
+  id             String       @id @default(uuid())
+  tenantId       String
+  name           String
+  dataSourceId   String
+  targetSchemaId String
+  approvalMode   ApprovalMode @default(MANUAL)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  dataSource   DataSource @relation(fields: [dataSourceId], references: [id], onDelete: Cascade)
+  targetSchema TargetSchema @relation(fields: [targetSchemaId], references: [id], onDelete: Cascade)
+  importJobs   ImportJob[]
+
+  @@index([tenantId])
+  @@index([dataSourceId])
+  @@index([targetSchemaId])
+}
+
+model ImportJob {
+  id        String         @id @default(uuid())
+  pipelineId String
+  status    ImportJobStatus @default(CREATED)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  @@index([pipelineId])
+}
