@@ -5,12 +5,22 @@ import { ImportJobStatus } from '../constants/importJobStatus';
 import csvParserService from '../services/csvParser.service';
 import mappingService from '../services/mapping.service';
 
-export function createImportJob(req: Request, res: Response) {
+export async function createImportJob(req: Request, res: Response) {
   try {
-    const importJob = importsService.createImportJobService();
-    res.status(201).json(importJob);
+    const pipelineId = req.body && req.body.pipelineId;
+
+    if (!pipelineId || typeof pipelineId !== 'string' || !pipelineId.trim()) {
+      return res.status(400).json({ error: 'pipelineId is required.' });
+    }
+
+    const importJob = await importsService.createImportJobService({ pipelineId });
+    return res.status(201).json(importJob);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create import job' });
+    const message = error instanceof Error ? error.message : 'Failed to create import job';
+    if (message.includes('not found')) {
+      return res.status(404).json({ error: message });
+    }
+    return res.status(400).json({ error: message });
   }
 }
 
@@ -22,10 +32,15 @@ export async function uploadFile(req: Request, res: Response) {
       return res.status(400).json({ error: 'Missing import job id in path parameter.' });
     }
 
-    // verify import job exists via service
-    const importJob = importsService.getImportJobById(importJobId);
-    if (!importJob) {
-      return res.status(404).json({ error: `ImportJob with id '${importJobId}' not found.` });
+    let uploadContext;
+    try {
+      uploadContext = await importsService.resolveImportJobUploadContext(importJobId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to resolve import job upload context';
+      if (message.includes('not found')) {
+        return res.status(404).json({ error: message });
+      }
+      return res.status(400).json({ error: message });
     }
 
     const file = req.file as Express.Multer.File | undefined;
@@ -33,7 +48,6 @@ export async function uploadFile(req: Request, res: Response) {
       return res.status(400).json({ error: 'No file uploaded. Provide a file in the "file" field.' });
     }
 
-    // Validate that the uploaded file is a CSV: prefer MIME type, fallback to .csv extension
     const isCsvMime = (file.mimetype || '').toLowerCase() === 'text/csv';
     const ext = path.extname(file.originalname || '').toLowerCase();
     const isCsvExt = ext === '.csv';
@@ -42,30 +56,12 @@ export async function uploadFile(req: Request, res: Response) {
       return res.status(400).json({ error: 'Uploaded file must be a CSV (MIME type text/csv or .csv extension).' });
     }
 
-    // Parse and validate targetSchema from form field
-    const targetSchemaRaw = (req.body && req.body.targetSchema) || null;
-    if (!targetSchemaRaw) {
-      return res.status(400).json({ error: 'Missing required form field "targetSchema" (JSON string).' });
-    }
-
-    let targetSchema: Record<string, string>;
-    try {
-      targetSchema = JSON.parse(targetSchemaRaw);
-      if (typeof targetSchema !== 'object' || Array.isArray(targetSchema) || targetSchema === null) {
-        throw new Error('targetSchema must be a JSON object');
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Invalid JSON in targetSchema';
-      return res.status(400).json({ error: `Invalid targetSchema: ${message}` });
-    }
-
+    const targetSchema = uploadContext.targetSchema.fields;
     const userInstruction = req.body && typeof req.body.userInstruction === 'string' ? req.body.userInstruction : undefined;
 
-    // Attempt to parse CSV from the uploaded buffer
     try {
       const parsed = csvParserService.parseCsvBuffer(file.buffer);
 
-      // Call mapping service (AI) with sampleRows, targetSchema, and optional userInstruction
       let mappingSuggestion;
       try {
         mappingSuggestion = await mappingService.suggestMappings(parsed.sampleRows, targetSchema, userInstruction);
@@ -83,7 +79,6 @@ export async function uploadFile(req: Request, res: Response) {
         mappingSuggestion,
       };
 
-      // Update ImportJob status to reflect that an AI mapping suggestion was generated
       try {
         importsService.updateImportJobStatus(importJobId, ImportJobStatus.MAPPING_SUGGESTED);
       } catch (err) {
@@ -100,14 +95,14 @@ export async function uploadFile(req: Request, res: Response) {
   }
 }
 
-export function getImportJob(req: Request, res: Response) {
+export async function getImportJob(req: Request, res: Response) {
   try {
     const importJobId = req.params && req.params.id;
     if (!importJobId || typeof importJobId !== 'string') {
       return res.status(400).json({ error: 'Missing import job id in path parameter.' });
     }
 
-    const importJob = importsService.getImportJobById(importJobId);
+    const importJob = await importsService.getImportJobById(importJobId);
     if (!importJob) {
       return res.status(404).json({ error: `ImportJob with id '${importJobId}' not found.` });
     }

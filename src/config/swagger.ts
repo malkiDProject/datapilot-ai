@@ -16,28 +16,67 @@ const swaggerOptions = {
     ],
     components: {
       schemas: {
+        Tenant: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+          required: ['id', 'name', 'createdAt', 'updatedAt'],
+        },
+        DataSource: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            tenantId: { type: 'string' },
+            name: { type: 'string' },
+            type: { type: 'string', enum: ['CSV', 'SFTP', 'S3', 'REST_API'] },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+          required: ['id', 'tenantId', 'name', 'type', 'createdAt', 'updatedAt'],
+        },
+        TargetSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            tenantId: { type: 'string' },
+            name: { type: 'string' },
+            fields: {
+              type: 'object',
+              additionalProperties: { type: 'string' },
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+          required: ['id', 'tenantId', 'name', 'fields', 'createdAt', 'updatedAt'],
+        },
+        Pipeline: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            tenantId: { type: 'string' },
+            name: { type: 'string' },
+            dataSourceId: { type: 'string' },
+            targetSchemaId: { type: 'string' },
+            approvalMode: { type: 'string', enum: ['MANUAL', 'AUTO'] },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+          required: ['id', 'tenantId', 'name', 'dataSourceId', 'targetSchemaId', 'approvalMode', 'createdAt', 'updatedAt'],
+        },
         ImportJob: {
           type: 'object',
           properties: {
-            id: {
-              type: 'string',
-              description: 'Unique identifier for the import job',
-            },
-            status: {
-              type: 'string',
-              description: 'Current status of the import job',
-            },
-            createdAt: {
-              type: 'string',
-              format: 'date-time',
-              description: 'Creation timestamp',
-            },
-            updatedAt: {
-              type: 'string',
-              format: 'date-time',
-              description: 'Last update timestamp',
-            },
+            id: { type: 'string', description: 'Unique identifier for the import job' },
+            pipelineId: { type: 'string', description: 'The pipeline that owns this import job' },
+            status: { type: 'string', description: 'Current status of the import job' },
+            createdAt: { type: 'string', format: 'date-time', description: 'Creation timestamp' },
+            updatedAt: { type: 'string', format: 'date-time', description: 'Last update timestamp' },
           },
+          required: ['id', 'pipelineId', 'status', 'createdAt', 'updatedAt'],
         },
         MappingRequest: {
           type: 'object',
@@ -76,6 +115,7 @@ const swaggerOptions = {
           },
         },
       },
+    },
     paths: {
       '/api/v1/mappings/suggest': {
         post: {
@@ -100,7 +140,6 @@ const swaggerOptions = {
           },
         },
       },
-    },
     },
   },
   apis: ['./src/routes/*.ts', './src/controllers/*.ts', './src/app.ts'],
