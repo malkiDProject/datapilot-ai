@@ -1,8 +1,7 @@
 import crypto from 'crypto';
 import { ImportJob } from '../models/importJob';
 import { ImportJobStatus } from '../constants/importJobStatus';
-
-const jobs: ImportJob[] = [];
+import importJobRepository from '../repositories/importJob.repository';
 
 export function createImportJobService() {
   const now = new Date();
@@ -13,7 +12,8 @@ export function createImportJobService() {
   });
 
   importJob.updatedAt = now;
-  jobs.push(importJob);
+  // Persist the newly created ImportJob in the shared repository
+  importJobRepository.save(importJob);
 
   return {
     id: importJob.id,
@@ -23,6 +23,21 @@ export function createImportJobService() {
   };
 }
 
+export function getImportJobById(id: string): ImportJob | null {
+  // Delegate to repository for lookup; keep controller free of repo logic
+  return importJobRepository.findById(id);
+}
+
+export function updateImportJobStatus(id: string, status: ImportJobStatus): ImportJob | null {
+  const job = importJobRepository.findById(id);
+  if (!job) return null;
+  job.status = status;
+  job.updatedAt = new Date();
+  return importJobRepository.update(job);
+}
+
 export default {
   createImportJobService,
+  getImportJobById,
+  updateImportJobStatus,
 };

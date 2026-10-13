@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import path from 'path';
 import importsService from '../services/imports.service';
+import { ImportJobStatus } from '../constants/importJobStatus';
 import csvParserService from '../services/csvParser.service';
 import mappingService from '../services/mapping.service';
 
@@ -15,6 +16,18 @@ export function createImportJob(req: Request, res: Response) {
 
 export async function uploadFile(req: Request, res: Response) {
   try {
+    const importJobId = req.params && req.params.id;
+
+    if (!importJobId || typeof importJobId !== 'string') {
+      return res.status(400).json({ error: 'Missing import job id in path parameter.' });
+    }
+
+    // verify import job exists via service
+    const importJob = importsService.getImportJobById(importJobId);
+    if (!importJob) {
+      return res.status(404).json({ error: `ImportJob with id '${importJobId}' not found.` });
+    }
+
     const file = req.file as Express.Multer.File | undefined;
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded. Provide a file in the "file" field.' });
@@ -61,6 +74,7 @@ export async function uploadFile(req: Request, res: Response) {
       }
 
       const result = {
+        importJobId,
         originalName: file.originalname,
         mimeType: file.mimetype,
         size: file.size,
@@ -68,6 +82,13 @@ export async function uploadFile(req: Request, res: Response) {
         sampleRows: parsed.sampleRows,
         mappingSuggestion,
       };
+
+      // Update ImportJob status to reflect that an AI mapping suggestion was generated
+      try {
+        importsService.updateImportJobStatus(importJobId, ImportJobStatus.MAPPING_SUGGESTED);
+      } catch (err) {
+        // Do not fail the request if status update fails; log silently (no logger configured)
+      }
 
       return res.status(200).json(result);
     } catch (err) {
@@ -79,7 +100,26 @@ export async function uploadFile(req: Request, res: Response) {
   }
 }
 
+export function getImportJob(req: Request, res: Response) {
+  try {
+    const importJobId = req.params && req.params.id;
+    if (!importJobId || typeof importJobId !== 'string') {
+      return res.status(400).json({ error: 'Missing import job id in path parameter.' });
+    }
+
+    const importJob = importsService.getImportJobById(importJobId);
+    if (!importJob) {
+      return res.status(404).json({ error: `ImportJob with id '${importJobId}' not found.` });
+    }
+
+    return res.status(200).json(importJob);
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to retrieve import job' });
+  }
+}
+
 export default {
   createImportJob,
   uploadFile,
+  getImportJob,
 };
